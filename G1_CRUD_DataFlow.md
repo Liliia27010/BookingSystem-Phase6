@@ -1,101 +1,208 @@
-# Booking System CRUD
+# G1 – CRUD Data Flow: Booking System (Phase 6)
 
-# CREATE – Create Resource
+---
 
-POST /api/resources  
-Status: 201 Created
+# 1️⃣ CREATE – Resource (Sequence Diagram)
 
+```mermaid
 sequenceDiagram
-    participant User
-    participant Frontend
-    participant Backend
-    participant PostgreSQL
+    participant U as User (Browser)
+    participant F as Frontend (form.js and resources.js)
+    participant B as Backend (Express Route)
+    participant S as Resource Service
+    participant V as express-validator
+    participant DB as PostgreSQL
 
-    User->>Frontend: Fill resource form
-    Frontend->>Backend: POST /api/resources
-    Backend->>PostgreSQL: INSERT new resource
+    U->>F: Submit form
+    F->>F: Client-side validation
+    F->>B: POST /api/resources (JSON)
+    B->>S: createResource(data)
+
+    S->>V: Validate request
+    V-->>S: Validation result
+
+    alt Validation fails (express-validator)
+        S-->>B: Errors in validation
+        B-->>F: 400 Bad Request
+        F-->>U: Show validation error message
+    else Validation OK
+        S->>DB: INSERT INTO resources
+        DB-->>S: Result
+
+        alt Success
+            S-->>B: Created resource
+            B-->>F: 201 Created
+            F-->>U: Show success message
+        else Duplicate
+            S-->>B: Duplicate detected
+            B-->>F: 409 Conflict
+            F-->>U: Show duplicate message
+        else Database error
+            S-->>B: Database error
+            B-->>F: 500 Internal Server Error
+            F-->>U: Show database error
+        end
+    end
+```
+
+---
+
+# 2️⃣ READ – Resource (Sequence Diagram)
+
+## READ – All Resources
+
+```mermaid
+sequenceDiagram
+    participant U as User (Browser)
+    participant F as Frontend (form.js and resources.js)
+    participant B as Backend (Express Route)
+    participant S as Resource Service
+    participant DB as PostgreSQL
+
+    U->>F: Request page
+    F->>B: GET /api/resources (JSON)
+    B->>S: selectResources()
+    S->>DB: SELECT FROM resources
+    DB-->>S: Result
 
     alt Success
-        PostgreSQL-->>Backend: Resource created
-        Backend-->>Frontend: 201 Created
-        Frontend-->>User: Show success message
-    else Validation error
-        Backend-->>Frontend: 400 Bad Request
-        Frontend-->>User: Show validation error
+        S-->>B: Selected resources
+        B-->>F: 200 OK
+        F-->>U: Render resource list (JSON)
+    else Database error
+        S-->>B: Database error
+        B-->>F: 500 Internal Server Error
+        F-->>U: Show database error
     end
+```
 
-# READ – Get Resources
+## READ – Single Resource by ID
 
-GET /api/resources  
-Status: 200 OK
-
+```mermaid
 sequenceDiagram
-    participant User
-    participant Frontend
-    participant Backend
-    participant PostgreSQL
+    participant U as User (Browser)
+    participant F as Frontend (form.js and resources.js)
+    participant B as Backend (Express Route)
+    participant S as Resource Service
+    participant DB as PostgreSQL
 
-    User->>Frontend: Open resources page
-    Frontend->>Backend: GET /api/resources
-    Backend->>PostgreSQL: SELECT * FROM resources
+    U->>F: Request resource detail
+    F->>B: GET /api/resources/:id (JSON)
+    B->>S: selectResource(id)
 
-    alt Success
-        PostgreSQL-->>Backend: Return resource list
-        Backend-->>Frontend: 200 OK
-        Frontend-->>User: Display resources
-    else Server error
-        Backend-->>Frontend: 500 Server Error
-        Frontend-->>User: Show error message
+    alt Invalid ID
+        S-->>B: Invalid ID
+        B-->>F: 400 Bad Request
+        F-->>U: Show invalid ID message
+    else Valid ID
+        S->>DB: SELECT FROM resources WHERE id = :id
+        DB-->>S: Result
+
+        alt Success
+            S-->>B: Selected resource
+            B-->>F: 200 OK
+            F-->>U: Render resource detail
+        else Not found
+            S-->>B: Resource not found
+            B-->>F: 404 Not Found
+            F-->>U: Show not found message
+        else Database error
+            S-->>B: Database error
+            B-->>F: 500 Internal Server Error
+            F-->>U: Show database error
+        end
     end
+```
 
+---
 
-# UPDATE – Update Resource
+# 3️⃣ UPDATE – Resource (Sequence Diagram)
 
-PUT /api/resources/4  
-Status: 200 OK
-
+```mermaid
 sequenceDiagram
-    participant User
-    participant Frontend
-    participant Backend
-    participant PostgreSQL
+    participant U as User (Browser)
+    participant F as Frontend (form.js and resources.js)
+    participant B as Backend (Express Route)
+    participant S as Resource Service
+    participant V as express-validator
+    participant DB as PostgreSQL
 
-    User->>Frontend: Edit resource
-    Frontend->>Backend: PUT /api/resources/:id
-    Backend->>PostgreSQL: UPDATE resource
+    U->>F: Submit edit form
+    F->>F: Client-side validation
+    F->>B: PUT /api/resources/:id (JSON)
+    B->>S: updateResource(id, data)
 
-    alt Success
-        PostgreSQL-->>Backend: Resource updated
-        Backend-->>Frontend: 200 OK
-        Frontend-->>User: Show updated resource
-    else Resource not found
-        Backend-->>Frontend: 404 Not Found
-        Frontend-->>User: Show error message
+    S->>V: Validate request
+    V-->>S: Validation result
+
+    alt Invalid ID
+        S-->>B: Invalid ID
+        B-->>F: 400 Bad Request
+        F-->>U: Show invalid ID message
+    else Validation fails (express-validator)
+        S-->>B: Errors in validation
+        B-->>F: 400 Bad Request
+        F-->>U: Show validation error message
+    else Validation OK
+        S->>DB: UPDATE resources SET ... WHERE id = :id
+        DB-->>S: Result
+
+        alt Success
+            S-->>B: Updated resource
+            B-->>F: 200 OK
+            F-->>U: Show success message
+        else Not found
+            S-->>B: Resource not found
+            B-->>F: 404 Not Found
+            F-->>U: Show not found message
+        else Duplicate
+            S-->>B: Duplicate detected
+            B-->>F: 409 Conflict
+            F-->>U: Show duplicate message
+        else Database error
+            S-->>B: Database error
+            B-->>F: 500 Internal Server Error
+            F-->>U: Show database error
+        end
     end
+```
 
+---
 
-# DELETE – Delete Resource
+# 4️⃣ DELETE – Resource (Sequence Diagram)
 
-DELETE /api/resources/4  
-Status: 204 No Content
-
-
+```mermaid
 sequenceDiagram
-    participant User
-    participant Frontend
-    participant Backend
-    participant PostgreSQL
+    participant U as User (Browser)
+    participant F as Frontend (form.js and resources.js)
+    participant B as Backend (Express Route)
+    participant S as Resource Service
+    participant DB as PostgreSQL
 
-    User->>Frontend: Click delete resource
-    Frontend->>Backend: DELETE /api/resources/:id
-    Backend->>PostgreSQL: DELETE resource
+    U->>F: Click delete button
+    F->>B: DELETE /api/resources/:id
+    B->>S: deleteResource(id)
 
-    alt Success
-        PostgreSQL-->>Backend: Resource deleted
-        Backend-->>Frontend: 204 No Content
-        Frontend-->>User: Remove resource from list
-    else Resource not found
-        Backend-->>Frontend: 404 Not Found
-        Frontend-->>User: Show error message
+    alt Invalid ID
+        S-->>B: Invalid ID
+        B-->>F: 400 Bad Request
+        F-->>U: Show invalid ID message
+    else Valid ID
+        S->>DB: DELETE FROM resources WHERE id = :id
+        DB-->>S: Result
+
+        alt Success
+            S-->>B: Deleted resource
+            B-->>F: 204 No Content
+            F-->>U: Show success message
+        else Not found
+            S-->>B: Resource not found
+            B-->>F: 404 Not Found
+            F-->>U: Show not found message
+        else Database error
+            S-->>B: Database error
+            B-->>F: 500 Internal Server Error
+            F-->>U: Show database error
+        end
     end
-  
+```

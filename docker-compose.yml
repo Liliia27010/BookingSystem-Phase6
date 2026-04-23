@@ -21,7 +21,7 @@ services:
       PGUSER: ${PGUSER}
       PGPASSWORD: ${PGPASSWORD}
     ports:
-      - "${EPORT}:${IPORT}"
+      - "3000:5000"
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
